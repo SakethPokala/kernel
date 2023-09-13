@@ -81,7 +81,7 @@ static int myinit(void)
 
 	devno = MKDEV(42, 0);
 
-	ret = register_chrdev_region(devno, 1, "SS_CHAR");
+	ret = register_chrdev_region(devno, 1, "Sysfs_driver");
 	if (ret != 0) 
 		pr_info("NOT LOADED\n");
 	else
@@ -188,6 +188,7 @@ static ssize_t sysfs_store(struct kobject *kobj, struct kobj_attribute *attr, co
 
 static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
+	pr_info("ioctl entered \n");
 	switch (cmd) {
 		case WR_VALUE :
 			if (copy_from_user((int32_t *)&sysfs_value, (int32_t *)arg, sizeof(sysfs_value))) 

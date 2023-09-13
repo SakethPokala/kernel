@@ -12,11 +12,11 @@
 
 /** IOCTL MACROS for read and write */
 
-#define WR_VALUE _IOW('a', 'a', int32_t *)
-#define RD_VALUE _IOR('a', 'b', int32_t *)
+#define WR_VALUE _IOW('a', 'a', char*)
+#define RD_VALUE _IOR('a', 'b', char*)
 
 dev_t devno;
-int32_t val;
+char ioctl_buff[1024];
 
 /** Function Prototypes */
 
@@ -144,16 +144,16 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	switch (cmd) {
 		case WR_VALUE :
-			if( copy_from_user(&val ,(int32_t*) arg, sizeof(val)) ) {
+			if( copy_from_user(ioctl_buff ,	(char *)arg, sizeof(ioctl_buff)) ) {
 				pr_err("Data Write : Err!\n");
 			}
 
-			pr_info("Value = %d\n", val);
+			pr_info("Value = %s\n", ioctl_buff);
 
 			break;
 
 		case RD_VALUE :
-				if( copy_to_user((int32_t*) arg, &val, sizeof(val)) )
+				if( copy_to_user((char*)arg, ioctl_buff, sizeof(ioctl_buff)) )
                         	{	
                                 	pr_err("Data Read : Err!\n");
                         	}

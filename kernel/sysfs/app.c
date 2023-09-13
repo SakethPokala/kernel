@@ -1,4 +1,3 @@
-
 /** HEADERS */
 
 #include<stdio.h>
