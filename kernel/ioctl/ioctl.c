@@ -57,18 +57,23 @@ static int myinit(void)
 	devno = MKDEV(42, 0);
 
 	ret = register_chrdev_region(devno, 1, "IOCTL_BASIC");
-	if (ret != 0)
+	if (ret != 0) {
 		pr_info("IOCTL NOT LOADED\n");
-	else
+		return -1;
+	} else {
 		pr_info("IOCTL LOADED\n");
+	}
 
 	cdev_init(&info.c_dev, &myroutins);
 
 	ret = cdev_add(&info.c_dev, devno, 1);
-	if (ret != 0)
+	if (ret != 0) {
 		pr_info("CDEV UNSUCCESSFUL\n");
-	else
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	} else {
 		pr_info("CDEV SUCCESSFUL\n");
+	}
 	
 	info.c_dev.owner = THIS_MODULE;
 	info.no = 0;
@@ -144,7 +149,7 @@ static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	switch (cmd) {
 		case WR_VALUE :
-			if( copy_from_user(ioctl_buff ,	(char *)arg, sizeof(ioctl_buff)) ) {
+			if( copy_from_user(ioctl_buff , (char *)arg, sizeof(ioctl_buff)) ) {
 				pr_err("Data Write : Err!\n");
 			}
 

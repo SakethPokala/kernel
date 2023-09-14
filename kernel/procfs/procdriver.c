@@ -1,4 +1,3 @@
-
 /** Headers */
 
 #include<linux/cdev.h>
@@ -15,7 +14,7 @@
 dev_t devno;
 
 /** Structure to create directory in procfs */
-static struct proc_dir_entry *parent;
+static struct proc_dir_entry *parent, *dir;
 
 
 /**
@@ -82,20 +81,25 @@ static int myinit(void)
 	devno = MKDEV(42, 0);
 
 	ret = register_chrdev_region(devno, 1, "Procfs_basic");
-	if (ret != 0)
+	if (ret != 0) {
 		pr_info("Procfs_baasic not loaded\n");
-	else
+		return -1;
+	} else {
 		pr_info("Procfs_basic loaded\n");
+	}
 
 	cdev_init(&info.c_dev, &myroutins);
 
 	info.c_dev.owner = THIS_MODULE;
 
 	ret = cdev_add(&info.c_dev, devno, 1);
-	if (ret != 0)
+	if (ret != 0) {
 		pr_info("Cdev not loaded\n");
-	else
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	} else {
 		pr_info("Cdev loaded\n");
+	}
 	
 	info.cnt = 0;
 
@@ -103,7 +107,12 @@ static int myinit(void)
 	if (parent == NULL) 
 		pr_info("Unable to create parent in proc\n");
 
-	proc_create("proc", 0666, parent, &proc_routins);
+	dir = proc_create("proc", 0666, parent, &proc_routins);
+	if (dir == NULL) {
+		pr_info("Unable to create proc\n");
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	}
 
 	pr_info("DRIVER LOADED\n");
 

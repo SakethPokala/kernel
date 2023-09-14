@@ -1,6 +1,7 @@
 /** HEADERS */
 
 #include<stdio.h>
+#include<stdio_ext.h>
 #include<stdlib.h>
 #include<string.h>
 #include<sys/types.h>
@@ -8,16 +9,15 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<sys/ioctl.h>
- 
-/** IOCTL MACROS for read and write */
 
-#define WR_VALUE _IOW('a','a',int32_t*)
-#define RD_VALUE _IOR('a','b',int32_t*)
- 
+#define READ 2
+#define WRITE 1
+#define EXIT 3
+
 int main()
 {
-        int fd, opt;
-        int32_t value, number;
+        int fd, opt, ret;
+        char *buff;
  
         fd = open("/sys/kernel/sysfs_etx/sysfs_value", O_RDWR);
         if(fd < 0) {
@@ -29,23 +29,31 @@ int main()
 	scanf("%d", &opt);
 
 	switch (opt) {
-		case 1:
-			printf("Enter the Value to send\n");
-        		scanf("%d",&number);
-        		
-			printf("Writing Value to Driver\n");
-        		ioctl(fd, WR_VALUE, (int32_t*) &number); 
+		case READ:
+			ret = read(fd, buff, sizeof(buff));
+			if (ret < 0) {
+				printf("Failed to read\n");
+				exit(1);
+			}
+
+			printf("%s\n", buff);
 			
 			break;
 
-		case 2:
-        		printf("Reading Value from Driver\n");
-        		ioctl(fd, RD_VALUE, (int32_t*) &value);
-        
-			printf("Value is %d\n", value);
+		case WRITE:
+			printf("Enter data\n");
+			scanf("%s", buff);
+			__fpurge(stdin);
+
+			ret = write(fd, buff, strlen(buff));
+			if (ret < 0) {
+				printf("Failed to write\n");
+				return -1;
+			}
+
 			break;
 
-		case 3: 
+		case EXIT: 
 			exit(0);
 
 		default:

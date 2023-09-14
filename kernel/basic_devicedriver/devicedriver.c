@@ -55,31 +55,47 @@ static int my_init(void)
 	int ret = 0;
 	
 	ret = alloc_chrdev_region(&devno, 0, 1, "Basic_Char_Driver");
-	if (ret < 0) 
+	if (ret < 0) { 
 		pr_info("Basic_char_Driver is not loaded\n");
-	else
+		return -1;
+	} else {
 		pr_info("Basic_Char_Driver loaded\n");
+	}
 
 	cls = class_create(THIS_MODULE, "mycharbasic");
+	if (cls == NULL) {
+		pr_info("can not create the class\n");
+		goto r_class;
+	}
+	
 	dev = device_create(cls, NULL, devno, 0, "mydevss");
+	if (dev == NULL) {
+		pr_info("cannot create device\n");
+		goto r_device;
+	}
 
 	cdev_init(&dinfo.c_dev, &my_routines);
 
 	dinfo.c_dev.owner = THIS_MODULE;
 
 	ret = cdev_add(&dinfo.c_dev, devno, 1);
-
 	if (ret < 0) {
 		pr_info("cdev_object is not loaded\n");
-		unregister_chrdev_region(devno, 1);
-	}
-	else {
+		goto r_class;
+	} else {
 		pr_info("Cdev obj is loaded\n");
 	}
 
 	dinfo.no_char = 0;
 	
 	return ret;
+	
+	r_device:
+		class_destroy(cls);
+	r_class:
+		unregister_chrdev_region(devno, 1);
+	
+		return -1;
 }
 
 /**

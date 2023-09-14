@@ -1,4 +1,3 @@
-
 /** Headers */
 
 #include<linux/cdev.h>
@@ -11,14 +10,7 @@
 #include<linux/module.h>
 #include<linux/sysfs.h>
 
-/**
- * IOCTL MACROS
- */
-
-#define WR_VALUE _IOW('a', 'a', int32_t *)
-#define RD_VALUE _IOR('a', 'b', int32_t *)
-
-int sysfs_value;
+char sysfs_value[1024];
 dev_t devno;
 
 
@@ -36,7 +28,6 @@ static int myopen(struct inode *inode, struct file *file);
 static int myclose(struct inode *inode, struct file *file);
 static ssize_t myread(struct file *file, char *buff, size_t len, loff_t *offset);
 static ssize_t mywrite(struct file *file, const char *buff, size_t len, loff_t *offset);
-static long ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 
 /**
@@ -60,7 +51,6 @@ static struct file_operations my_routines = {
 	.release = myclose,
 	.read = myread,
 	.write = mywrite,
-	.unlocked_ioctl = ioctl,
 };
 
 struct d_info {
@@ -82,28 +72,42 @@ static int myinit(void)
 	devno = MKDEV(42, 0);
 
 	ret = register_chrdev_region(devno, 1, "Sysfs_driver");
-	if (ret != 0) 
+	if (ret != 0) { 
 		pr_info("NOT LOADED\n");
-	else
+		return -1;
+	} else {
 		pr_info("LOADED DRIVER\n");
+	}
 
 	cdev_init(&info.c_dev, &my_routines);
 
 	info.c_dev.owner = THIS_MODULE;
 
 	ret = cdev_add(&info.c_dev, devno, 1);
-	if (ret != 0)
+	if (ret != 0) {
 		pr_info("Cdev not loaded\n");
-	else
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	} else {
 		pr_info("Cdev loaded\n");
+	}
 
 	info.len = 0;
 	
-	kobj_ref = kobject_create_and_add("sysfs_etx",kernel_kobj);
+	kobj_ref = kobject_create_and_add("sysfs_etx", kernel_kobj);
+	if (kobj_ref == NULL) {
+		pr_info("Unable to create kobject\n");
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	}
 
         /*Creating sysfs file for sysfs_value*/
-        if(sysfs_create_file(kobj_ref,&etx_attr.attr))
+        if(sysfs_create_file(kobj_ref, &etx_attr.attr)) {
                 pr_err("Cannot create sysfs file......\n");
+		kobject_put(kobj_ref);
+		sysfs_remove_file(kobj_ref, &etx_attr.attr);
+		return -1;
+	}
 
 	return 0;
 }
@@ -167,7 +171,7 @@ static ssize_t mywrite(struct file *file, const char *buff, size_t len, loff_t *
 static ssize_t sysfs_show(struct kobject *kobj, struct kobj_attribute *attr, char *buff)
 {
         pr_info("Sysfs - Read!!!\n");
-        return sprintf(buff, "%d\n", sysfs_value);
+        return sprintf(buff, "%s\n", sysfs_value);
 }
 
 /** 
@@ -177,39 +181,9 @@ static ssize_t sysfs_show(struct kobject *kobj, struct kobj_attribute *attr, cha
 static ssize_t sysfs_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buff, size_t count)
 {
         pr_info("Sysfs - Write!!!\n");
-        sscanf(buff,"%d",&sysfs_value);
+        sscanf(buff,"%s", sysfs_value);
         
 	return count;
-}
-
-/**
- * IOCTL function
- */
-
-static long ioctl(struct file *file, unsigned int cmd, unsigned long arg)
-{
-	pr_info("ioctl entered \n");
-	switch (cmd) {
-		case WR_VALUE :
-			if (copy_from_user((int32_t *)&sysfs_value, (int32_t *)arg, sizeof(sysfs_value))) 
-				pr_err("Data Write : Err!\n");
-			
-			pr_info("Value = %d\n", sysfs_value);
-
-			break;
-
-		case RD_VALUE :
-			if (copy_to_user((int32_t *)arg, (int32_t *)&sysfs_value, sizeof(sysfs_value)))
-				pr_err("Data Read : Err!\n");
-
-			break;
-
-		default :
-			pr_info("Default\n");
-
-	}
-
-	return 0;
 }
 
 /**
