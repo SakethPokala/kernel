@@ -1,4 +1,6 @@
-/** Headers for driver */
+/** 
+ * This code represents how to implement a basic device driver
+ */
 
 #include<linux/cdev.h>
 #include<linux/errno.h>
@@ -57,7 +59,7 @@ static int my_init(void)
 	ret = alloc_chrdev_region(&devno, 0, 1, "Basic_Char_Driver");
 	if (ret < 0) { 
 		pr_info("Basic_char_Driver is not loaded\n");
-		return -1;
+		goto r_unreg;
 	} else {
 		pr_info("Basic_Char_Driver loaded\n");
 	}
@@ -81,7 +83,7 @@ static int my_init(void)
 	ret = cdev_add(&dinfo.c_dev, devno, 1);
 	if (ret < 0) {
 		pr_info("cdev_object is not loaded\n");
-		goto r_class;
+		goto r_device;
 	} else {
 		pr_info("Cdev obj is loaded\n");
 	}
@@ -91,8 +93,12 @@ static int my_init(void)
 	return ret;
 	
 	r_device:
-		class_destroy(cls);
+		device_destroy(cls, devno);
 	r_class:
+		class_destroy(cls);
+	r_del:
+		cdev_del(&info.c_dev);
+	r_unreg:
 		unregister_chrdev_region(devno, 1);
 	
 		return -1;

@@ -1,4 +1,6 @@
-/** Headers */
+/** 
+ * This code represents a basic communication of device file using procfs.
+ */
 
 #include<linux/cdev.h>
 #include<linux/errno.h>
@@ -83,7 +85,7 @@ static int myinit(void)
 	ret = register_chrdev_region(devno, 1, "Procfs_basic");
 	if (ret != 0) {
 		pr_info("Procfs_baasic not loaded\n");
-		return -1;
+		goto r_unreg;
 	} else {
 		pr_info("Procfs_basic loaded\n");
 	}
@@ -95,28 +97,35 @@ static int myinit(void)
 	ret = cdev_add(&info.c_dev, devno, 1);
 	if (ret != 0) {
 		pr_info("Cdev not loaded\n");
-		unregister_chrdev_region(devno, 1);
-		return -1;
+		goto r_cdev;
 	} else {
 		pr_info("Cdev loaded\n");
 	}
 	
 	info.cnt = 0;
 
-	parent = proc_mkdir("saketh",NULL);
+	parent = proc_mkdir("proc_basic",NULL);
 	if (parent == NULL) 
 		pr_info("Unable to create parent in proc\n");
 
 	dir = proc_create("proc", 0666, parent, &proc_routins);
 	if (dir == NULL) {
 		pr_info("Unable to create proc\n");
-		unregister_chrdev_region(devno, 1);
-		return -1;
+		goto r_proc;
 	}
 
 	pr_info("DRIVER LOADED\n");
 
 	return 0;
+
+	goto r_proc:
+		proc_remove(parent);
+	goto r_cdev:
+		cdev_del(&info.c_dev);
+	goto r_unreg:
+		unregister_chrdev_region(devno, 1);
+
+	return -1;
 }
 
 /**

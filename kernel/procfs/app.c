@@ -17,7 +17,7 @@ void main()
 	int fd, ret, opt;
 	char buf[1000];
 
-	fd = open("/proc/saketh/proc", O_RDWR);
+	fd = open("/proc/proc_basic/proc", O_RDWR);
 	if (fd < 0) {
 		printf("Failed to open\n");
 		exit(1);

@@ -1,4 +1,6 @@
-/** Headers */
+/** 
+ * This code represents the communication between driver and sysfs
+ */
 
 #include<linux/cdev.h>
 #include<linux/errno.h>
@@ -74,7 +76,7 @@ static int myinit(void)
 	ret = register_chrdev_region(devno, 1, "Sysfs_driver");
 	if (ret != 0) { 
 		pr_info("NOT LOADED\n");
-		return -1;
+		goto r_unreg;
 	} else {
 		pr_info("LOADED DRIVER\n");
 	}
@@ -86,8 +88,7 @@ static int myinit(void)
 	ret = cdev_add(&info.c_dev, devno, 1);
 	if (ret != 0) {
 		pr_info("Cdev not loaded\n");
-		unregister_chrdev_region(devno, 1);
-		return -1;
+		goto r_cdev;
 	} else {
 		pr_info("Cdev loaded\n");
 	}
@@ -97,19 +98,28 @@ static int myinit(void)
 	kobj_ref = kobject_create_and_add("sysfs_etx", kernel_kobj);
 	if (kobj_ref == NULL) {
 		pr_info("Unable to create kobject\n");
-		unregister_chrdev_region(devno, 1);
-		return -1;
+		goto r_kobj;
 	}
 
         /*Creating sysfs file for sysfs_value*/
         if(sysfs_create_file(kobj_ref, &etx_attr.attr)) {
                 pr_err("Cannot create sysfs file......\n");
-		kobject_put(kobj_ref);
-		sysfs_remove_file(kobj_ref, &etx_attr.attr);
-		return -1;
+		goto r_sys;
 	}
 
 	return 0;
+	
+	r_sys:
+		sysfs_remove_file(kobj_ref, &etx_attr.attr);
+	r_kobj:
+		kobject_put(kobj_ref);
+	r_cdev:
+		cdev_del(&info.c_dev);
+	r_unreg:
+		unregister_chrdev_region(devno, 1);
+
+	return -1;
+
 }
 
 /**
@@ -118,8 +128,8 @@ static int myinit(void)
 
 static void myexit(void)
 {
-	kobject_put(kobj_ref);
 	sysfs_remove_file(kobj_ref, &etx_attr.attr);
+	kobject_put(kobj_ref);
 	cdev_del(&info.c_dev);
 	unregister_chrdev_region(devno, 1);
         pr_info("Device Driver Remove...Done!!!\n");

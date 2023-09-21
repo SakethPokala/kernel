@@ -1,4 +1,8 @@
-/** HEADERS */
+/** 
+ * This code represents the implementation of basic ioctl.
+ *
+ * In this code you have to create a device file manually with major number as 42 and minor number as 0.
+ */
 
 #include<linux/cdev.h>
 #include<linux/errno.h>
@@ -59,6 +63,7 @@ static int myinit(void)
 	ret = register_chrdev_region(devno, 1, "IOCTL_BASIC");
 	if (ret != 0) {
 		pr_info("IOCTL NOT LOADED\n");
+		unregister_chrdev_region(devno, 1);
 		return -1;
 	} else {
 		pr_info("IOCTL LOADED\n");
@@ -69,6 +74,7 @@ static int myinit(void)
 	ret = cdev_add(&info.c_dev, devno, 1);
 	if (ret != 0) {
 		pr_info("CDEV UNSUCCESSFUL\n");
+		cdev_del(&info.c_dev);
 		unregister_chrdev_region(devno, 1);
 		return -1;
 	} else {
